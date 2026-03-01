@@ -19,6 +19,7 @@ import logging
 import os
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 # ── Logging ───────────────────────────────────────────────────────
 logging.basicConfig(
@@ -29,6 +30,13 @@ logger = logging.getLogger("aaif_mcp_server")
 
 
 # ── Server Instance ───────────────────────────────────────────────
+# Disable DNS rebinding protection when running behind a reverse proxy
+# (Railway, Cloud Run, etc.) so external host headers are accepted.
+_transport = os.environ.get("AAIF_MCP_TRANSPORT", "stdio")
+_security = None
+if _transport == "streamable-http":
+    _security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
+
 mcp = FastMCP(
     "AAIF Member Onboarding",
     instructions=(
@@ -37,6 +45,7 @@ mcp = FastMCP(
         "Tier Validation, Compliance & Sanctions, Mailing List Provisioning, "
         "and Orchestration/Silo Reconciliation."
     ),
+    transport_security=_security,
 )
 
 
@@ -441,6 +450,27 @@ def main():
         port = int(os.environ.get("FASTMCP_PORT", os.environ.get("PORT", "8080")))
         logger.info(f"Binding to {host}:{port}")
         app = mcp.streamable_http_app()
+
+        # Middleware to rewrite Host header for reverse proxy compatibility
+        class HostRewriteMiddleware:
+            """Rewrite the Host header so the MCP library accepts requests
+            arriving through Railway/Cloud Run reverse proxies."""
+            def __init__(self, wrapped_app):
+                self.wrapped_app = wrapped_app
+
+            async def __call__(self, scope, receive, send):
+                if scope["type"] == "http":
+                    scope = dict(scope)
+                    new_headers = []
+                    for key, value in scope.get("headers", []):
+                        if key == b"host":
+                            new_headers.append((key, f"localhost:{port}".encode()))
+                        else:
+                            new_headers.append((key, value))
+                    scope["headers"] = new_headers
+                await self.wrapped_app(scope, receive, send)
+
+        app = HostRewriteMiddleware(app)
         uvicorn.run(
             app, host=host, port=port,
             proxy_headers=True, forwarded_allow_ips="*",
