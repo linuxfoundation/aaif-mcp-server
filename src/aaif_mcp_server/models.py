@@ -273,3 +273,12 @@ class ProvisioningRule(BaseModel):
 class RulesConfig(BaseModel):
     foundation_id: str
     rules: list[ProvisioningRule] = Field(default_factory=list)
+
+
+# ── Error Responses ────────────────────────────────────────────────
+
+class ErrorResponse(BaseModel):
+    """Standardized error response for all tools and resources."""
+    error: str
+    message: str
+    details: dict = Field(default_factory=dict)

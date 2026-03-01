@@ -9,13 +9,9 @@ based on tier + role provisioning rules. All operations use the Groups.io
 connector and reference the PROVISIONING_RULES config.
 """
 
-from ..connectors.groupsio import GroupsIOConnector
-from ..connectors.salesforce import SalesforceConnector
+from ..connectors.registry import get_sfdc, get_groupsio
 from ..config import PROVISIONING_RULES
 from ..models import MailingListAction, MailingListGap, MailingListMembership
-
-sfdc: SalesforceConnector = SalesforceConnector()
-groupsio: GroupsIOConnector = GroupsIOConnector()
 
 
 async def provision_mailing_lists(
@@ -37,7 +33,7 @@ async def provision_mailing_lists(
     Returns:
         List of actions taken (or planned in dry_run mode).
     """
-    org = await sfdc.get_org(org_id)
+    org = await get_sfdc().get_org(org_id)
     if not org:
         return {"error": "ORG_NOT_FOUND", "message": f"No org found with ID '{org_id}'"}
 
@@ -76,7 +72,7 @@ async def provision_mailing_lists(
 
     actions: list[dict] = []
     for list_name in sorted(expected_lists):
-        already_member = await groupsio.is_member(list_name, contact.email)
+        already_member = await get_groupsio().is_member(list_name, contact.email)
 
         if already_member:
             actions.append(MailingListAction(
@@ -93,7 +89,7 @@ async def provision_mailing_lists(
                 reason="Would be added (dry_run=True)",
             ).model_dump())
         else:
-            result = await groupsio.add_member(list_name, contact.email)
+            result = await get_groupsio().add_member(list_name, contact.email)
             actions.append(MailingListAction(
                 list_name=list_name, email=contact.email,
                 action="add", status="success" if result.get("status") == "added" else "error",
@@ -131,16 +127,16 @@ async def remove_from_mailing_lists(
     Returns:
         List of removal actions taken (or planned in dry_run mode).
     """
-    org = await sfdc.get_org(org_id)
+    org = await get_sfdc().get_org(org_id)
     if not org:
         return {"error": "ORG_NOT_FOUND", "message": f"No org found with ID '{org_id}'"}
 
     # Get all foundation lists
-    all_lists = await groupsio.get_lists(foundation_id)
+    all_lists = await get_groupsio().get_lists(foundation_id)
     actions: list[dict] = []
 
     for list_name in all_lists:
-        is_member = await groupsio.is_member(list_name, contact_email)
+        is_member = await get_groupsio().is_member(list_name, contact_email)
         if not is_member:
             continue
 
@@ -151,7 +147,7 @@ async def remove_from_mailing_lists(
                 reason="Would be removed (dry_run=True)",
             ).model_dump())
         else:
-            result = await groupsio.remove_member(list_name, contact_email)
+            result = await get_groupsio().remove_member(list_name, contact_email)
             actions.append(MailingListAction(
                 list_name=list_name, email=contact_email,
                 action="remove",
@@ -192,11 +188,11 @@ async def check_mailing_list_membership(
     Returns:
         Membership status across all foundation mailing lists.
     """
-    all_lists = await groupsio.get_lists(foundation_id)
+    all_lists = await get_groupsio().get_lists(foundation_id)
     membership: dict[str, bool] = {}
 
     for list_name in sorted(all_lists):
-        membership[list_name] = await groupsio.is_member(list_name, contact_email)
+        membership[list_name] = await get_groupsio().is_member(list_name, contact_email)
 
     subscribed = [k for k, v in membership.items() if v]
     not_subscribed = [k for k, v in membership.items() if not v]
@@ -235,7 +231,7 @@ async def remediate_mailing_lists(
     if not rules_config:
         return {"error": "NO_RULES", "message": f"No provisioning rules for '{foundation_id}'"}
 
-    orgs = await sfdc.list_orgs(foundation_id)
+    orgs = await get_sfdc().list_orgs(foundation_id)
     gaps: list[dict] = []
     actions: list[dict] = []
 
@@ -256,15 +252,15 @@ async def remediate_mailing_lists(
             # Check actual
             actual = set()
             for list_name in expected:
-                if await groupsio.is_member(list_name, contact.email):
+                if await get_groupsio().is_member(list_name, contact.email):
                     actual.add(list_name)
 
             missing = expected - actual
             # Also check for extra lists the contact shouldn't have
-            all_foundation_lists = await groupsio.get_lists(foundation_id)
+            all_foundation_lists = await get_groupsio().get_lists(foundation_id)
             actual_all = set()
             for list_name in all_foundation_lists:
-                if await groupsio.is_member(list_name, contact.email):
+                if await get_groupsio().is_member(list_name, contact.email):
                     actual_all.add(list_name)
             extra = actual_all - expected
 
@@ -287,7 +283,7 @@ async def remediate_mailing_lists(
                             reason=f"Missing per rules (tier={org.tier.value}, role={contact.role.value})",
                         ).model_dump())
                     else:
-                        await groupsio.add_member(list_name, contact.email)
+                        await get_groupsio().add_member(list_name, contact.email)
                         actions.append(MailingListAction(
                             list_name=list_name, email=contact.email,
                             action="add", status="success",

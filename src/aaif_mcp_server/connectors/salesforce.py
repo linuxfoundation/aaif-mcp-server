@@ -187,6 +187,40 @@ class SalesforceConnector(BaseCRMConnector):
             github_username=record.get("GitHub_Username__c"),
         )
 
+    # ── Query helpers ─────────────────────────────────────────────────
+
+    @staticmethod
+    def _escape_soql(value: str) -> str:
+        """Escape a string value for safe SOQL interpolation.
+
+        SOQL uses single-quote doubling (not backslash escaping) to represent
+        literal single quotes. Also strips characters that could break out of
+        the string context (newlines, backslashes).
+
+        References:
+        - https://developer.salesforce.com/docs/atlas.en-us.soql_sosl.meta/soql_sosl/sforce_api_calls_soql_select_quotedstringescapes.htm
+        """
+        if not isinstance(value, str):
+            value = str(value)
+        # Remove characters that could enable injection
+        value = value.replace("\\", "")      # strip backslashes
+        value = value.replace("\n", " ")      # strip newlines
+        value = value.replace("\r", " ")      # strip carriage returns
+        value = value.replace("'", "''")      # SOQL single-quote escaping
+        return value
+
+    @staticmethod
+    def _validate_sfdc_id(sfdc_id: str) -> str:
+        """Validate a Salesforce ID (15 or 18 char alphanumeric).
+
+        Raises ValueError if the ID doesn't match the expected format.
+        This prevents arbitrary SOQL injection via ID fields.
+        """
+        import re
+        if not sfdc_id or not re.match(r'^[a-zA-Z0-9]{15,18}$', sfdc_id):
+            raise ValueError(f"Invalid Salesforce ID format: {sfdc_id!r}")
+        return sfdc_id
+
     # ── Public API ────────────────────────────────────────────────────
 
     async def health_check(self) -> dict:
@@ -204,10 +238,11 @@ class SalesforceConnector(BaseCRMConnector):
         if self._use_mock:
             return MOCK_MEMBERS.get(org_id)
 
-        # Query account
+        # Query account — validate ID to prevent SOQL injection
+        safe_id = self._validate_sfdc_id(org_id)
         account_fields = ", ".join(SFDC_FIELD_MAP["account"].keys())
         records = await self._query(
-            f"SELECT {account_fields} FROM Account WHERE Id = '{org_id}'"
+            f"SELECT {account_fields} FROM Account WHERE Id = '{safe_id}'"
         )
         if not records:
             return None
@@ -215,7 +250,7 @@ class SalesforceConnector(BaseCRMConnector):
         # Query associated contacts
         contact_fields = ", ".join(SFDC_FIELD_MAP["contact"].keys())
         contact_records = await self._query(
-            f"SELECT {contact_fields} FROM Contact WHERE AccountId = '{org_id}'"
+            f"SELECT {contact_fields} FROM Contact WHERE AccountId = '{safe_id}'"
         )
         contacts = [self._parse_contact(r) for r in contact_records]
 
@@ -229,8 +264,7 @@ class SalesforceConnector(BaseCRMConnector):
             return None
 
         account_fields = ", ".join(SFDC_FIELD_MAP["account"].keys())
-        # Escape single quotes in name
-        safe_name = org_name.replace("'", "\\'")
+        safe_name = self._escape_soql(org_name)
         records = await self._query(
             f"SELECT {account_fields} FROM Account WHERE Name = '{safe_name}'"
         )
@@ -247,9 +281,10 @@ class SalesforceConnector(BaseCRMConnector):
             org = MOCK_MEMBERS.get(org_id)
             return org.contacts if org else []
 
+        safe_id = self._validate_sfdc_id(org_id)
         contact_fields = ", ".join(SFDC_FIELD_MAP["contact"].keys())
         records = await self._query(
-            f"SELECT {contact_fields} FROM Contact WHERE AccountId = '{org_id}'"
+            f"SELECT {contact_fields} FROM Contact WHERE AccountId = '{safe_id}'"
         )
         return [self._parse_contact(r) for r in records]
 
@@ -258,9 +293,10 @@ class SalesforceConnector(BaseCRMConnector):
             return [m for m in MOCK_MEMBERS.values() if m.foundation_id == foundation_id]
 
         account_fields = ", ".join(SFDC_FIELD_MAP["account"].keys())
+        safe_foundation = self._escape_soql(foundation_id)
         records = await self._query(
             f"SELECT {account_fields} FROM Account "
-            f"WHERE Foundation__c = '{foundation_id}' "
+            f"WHERE Foundation__c = '{safe_foundation}' "
             f"ORDER BY Name ASC"
         )
         orgs = []

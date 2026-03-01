@@ -8,12 +8,9 @@ These tools validate membership tiers against Salesforce, return entitlement
 matrices, and detect anomalies where provisioned access doesn't match tier.
 """
 
-from ..connectors.salesforce import SalesforceConnector
+from ..connectors.registry import get_sfdc
 from ..config import TIER_ENTITLEMENTS, PROVISIONING_RULES, MOCK_LIST_SUBSCRIPTIONS
 from ..models import TierAnomaly, TierValidationResult
-
-# Module-level connector (initialized by server.py)
-sfdc: SalesforceConnector = SalesforceConnector()
 
 
 async def validate_membership_tier(org_id: str, foundation_id: str = "aaif") -> dict:
@@ -27,7 +24,7 @@ async def validate_membership_tier(org_id: str, foundation_id: str = "aaif") -> 
     Returns:
         Tier validation result with entitlements and any detected anomalies.
     """
-    org = await sfdc.get_org(org_id)
+    org = await get_sfdc().get_org(org_id)
     if not org:
         return {
             "error": "ORG_NOT_FOUND",
@@ -114,7 +111,7 @@ async def detect_tier_anomalies(foundation_id: str = "aaif") -> dict:
     Returns:
         List of anomalies with severity and suggested fixes.
     """
-    orgs = await sfdc.list_orgs(foundation_id)
+    orgs = await get_sfdc().list_orgs(foundation_id)
     anomalies: list[dict] = []
 
     rules_config = PROVISIONING_RULES.get(foundation_id)

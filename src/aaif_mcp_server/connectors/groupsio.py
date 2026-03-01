@@ -24,17 +24,6 @@ logger = logging.getLogger(__name__)
 
 GROUPSIO_BASE_URL = "https://groups.io/api/v1"
 
-# In-memory store for mock mode (so mutations persist within a session)
-_mock_subscriptions: dict[str, list[str]] = {}
-_initialized = False
-
-
-def _init_mock():
-    global _mock_subscriptions, _initialized
-    if not _initialized:
-        _mock_subscriptions = {k: list(v) for k, v in MOCK_LIST_SUBSCRIPTIONS.items()}
-        _initialized = True
-
 
 class GroupsIOConnector(BaseMailingListConnector):
     """Groups.io mailing list connector. Mock data in dev; real API in production."""
@@ -44,10 +33,24 @@ class GroupsIOConnector(BaseMailingListConnector):
         self.org_id = org_id or os.environ.get("GROUPSIO_ORG_ID", "")
         self._use_mock = not self.api_token
         self._client: Optional[httpx.AsyncClient] = None
+        # Instance-level mock state (C-3 fix: no shared global state)
+        self._mock_subscriptions: dict[str, list[str]] = {}
+        self._mock_initialized = False
+
+    def _init_mock(self) -> None:
+        """Deep-copy the seed data into this instance's mock state.
+
+        Called once per connector lifetime. Subsequent calls are no-ops.
+        This ensures each connector instance has its own mutable copy
+        of the subscription data, preventing cross-request contamination.
+        """
+        if not self._mock_initialized:
+            self._mock_subscriptions = {k: list(v) for k, v in MOCK_LIST_SUBSCRIPTIONS.items()}
+            self._mock_initialized = True
 
     async def initialize(self) -> None:
         if self._use_mock:
-            _init_mock()
+            self._init_mock()
             logger.info("GroupsIOConnector: using mock data (no GROUPSIO_API_TOKEN)")
             return
         self._client = httpx.AsyncClient(
@@ -86,8 +89,8 @@ class GroupsIOConnector(BaseMailingListConnector):
 
     async def add_member(self, list_name: str, email: str) -> dict:
         if self._use_mock:
-            _init_mock()
-            subs = _mock_subscriptions.setdefault(email, [])
+            self._init_mock()
+            subs = self._mock_subscriptions.setdefault(email, [])
             if list_name in subs:
                 return {"status": "already_member", "list": list_name, "email": email}
             subs.append(list_name)
@@ -112,8 +115,8 @@ class GroupsIOConnector(BaseMailingListConnector):
 
     async def remove_member(self, list_name: str, email: str) -> dict:
         if self._use_mock:
-            _init_mock()
-            subs = _mock_subscriptions.get(email, [])
+            self._init_mock()
+            subs = self._mock_subscriptions.get(email, [])
             if list_name not in subs:
                 return {"status": "not_member", "list": list_name, "email": email}
             subs.remove(list_name)
@@ -137,8 +140,8 @@ class GroupsIOConnector(BaseMailingListConnector):
 
     async def get_members(self, list_name: str) -> list[str]:
         if self._use_mock:
-            _init_mock()
-            return [email for email, lists in _mock_subscriptions.items() if list_name in lists]
+            self._init_mock()
+            return [email for email, lists in self._mock_subscriptions.items() if list_name in lists]
 
         # Live: GET /getmembers (paginated)
         group_name = self._group_name_to_id(list_name)
@@ -162,8 +165,8 @@ class GroupsIOConnector(BaseMailingListConnector):
 
     async def is_member(self, list_name: str, email: str) -> bool:
         if self._use_mock:
-            _init_mock()
-            return list_name in _mock_subscriptions.get(email, [])
+            self._init_mock()
+            return list_name in self._mock_subscriptions.get(email, [])
 
         # Live: GET /getmember
         group_name = self._group_name_to_id(list_name)
@@ -180,9 +183,9 @@ class GroupsIOConnector(BaseMailingListConnector):
 
     async def get_lists(self, foundation_id: str) -> list[str]:
         if self._use_mock:
-            _init_mock()
+            self._init_mock()
             all_lists = set()
-            for subs in _mock_subscriptions.values():
+            for subs in self._mock_subscriptions.values():
                 all_lists.update(subs)
             # Add known AAIF lists
             all_lists.update([

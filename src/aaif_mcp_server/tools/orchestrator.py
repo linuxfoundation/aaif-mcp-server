@@ -10,17 +10,13 @@ and reconcile data across siloed systems (SFDC, Groups.io, member tracker).
 
 from datetime import datetime
 
-from ..connectors.salesforce import SalesforceConnector
-from ..connectors.groupsio import GroupsIOConnector
+from ..connectors.registry import get_sfdc, get_groupsio
 from ..config import CHECKLIST_TEMPLATES, PROVISIONING_RULES
 from ..models import (
     ChecklistResult, DeliverableId, DeliverableStatus,
     OnboardingStep, SiloDiscrepancy,
     SiloHealthReport, StepStatus,
 )
-
-sfdc: SalesforceConnector = SalesforceConnector()
-groupsio: GroupsIOConnector = GroupsIOConnector()
 
 # In-memory onboarding status store (production: persist to DB)
 _onboarding_store: dict[str, dict] = {}
@@ -47,7 +43,7 @@ async def run_onboarding_checklist(
     Returns:
         Checklist execution result with per-deliverable status.
     """
-    org = await sfdc.get_org(org_id)
+    org = await get_sfdc().get_org(org_id)
     if not org:
         return {"error": "ORG_NOT_FOUND", "message": f"No org found with ID '{org_id}'"}
 
@@ -188,7 +184,7 @@ async def _execute_checklist_step(
 
     elif tool_name == "check_sanctions":
         from .compliance import check_sanctions
-        org = await sfdc.get_org(org_id)
+        org = await get_sfdc().get_org(org_id)
         return await check_sanctions(org.org_name, org.country, org_id)
 
     elif tool_name == "check_tax_exempt_status":
@@ -226,7 +222,7 @@ async def get_onboarding_status(org_id: str, contact_id: str) -> dict:
 
     if not stored:
         # No checklist has been run — check if org exists
-        org = await sfdc.get_org(org_id)
+        org = await get_sfdc().get_org(org_id)
         if not org:
             return {"error": "ORG_NOT_FOUND", "message": f"No org found with ID '{org_id}'"}
 
@@ -263,7 +259,7 @@ async def reconcile_silos(org_id: str, foundation_id: str = "aaif") -> dict:
     Returns:
         List of discrepancies found with suggested fixes.
     """
-    org = await sfdc.get_org(org_id)
+    org = await get_sfdc().get_org(org_id)
     if not org:
         return {"error": "ORG_NOT_FOUND", "message": f"No org found with ID '{org_id}'"}
 
@@ -280,7 +276,7 @@ async def reconcile_silos(org_id: str, foundation_id: str = "aaif") -> dict:
 
         # Check Groups.io
         for list_name in expected_lists:
-            is_member = await groupsio.is_member(list_name, contact.email)
+            is_member = await get_groupsio().is_member(list_name, contact.email)
             if not is_member:
                 discrepancies.append(SiloDiscrepancy(
                     system_a="salesforce",
@@ -336,16 +332,16 @@ async def run_offboarding_checklist(
     Returns:
         Offboarding actions taken or planned.
     """
-    org = await sfdc.get_org(org_id)
+    org = await get_sfdc().get_org(org_id)
     if not org:
         return {"error": "ORG_NOT_FOUND", "message": f"No org found with ID '{org_id}'"}
 
     actions: list[dict] = []
 
     # Step 1: Remove from all mailing lists
-    all_lists = await groupsio.get_lists(foundation_id)
+    all_lists = await get_groupsio().get_lists(foundation_id)
     for list_name in all_lists:
-        is_member = await groupsio.is_member(list_name, contact_email)
+        is_member = await get_groupsio().is_member(list_name, contact_email)
         if not is_member:
             continue
 
@@ -357,7 +353,7 @@ async def run_offboarding_checklist(
                 "status": "dry_run",
             })
         else:
-            await groupsio.remove_member(list_name, contact_email)
+            await get_groupsio().remove_member(list_name, contact_email)
             actions.append({
                 "step": "remove_mailing_list",
                 "list": list_name,
@@ -407,7 +403,7 @@ async def get_silo_health(foundation_id: str = "aaif") -> dict:
     Returns:
         Silo health report with overall score and top issues.
     """
-    orgs = await sfdc.list_orgs(foundation_id)
+    orgs = await get_sfdc().list_orgs(foundation_id)
     active_orgs = [o for o in orgs if o.status == "active"]
 
     total_discrepancies = 0

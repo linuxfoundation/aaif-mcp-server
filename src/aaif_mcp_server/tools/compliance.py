@@ -13,11 +13,10 @@ screening result rather than duplicating the screening logic.
 import logging
 from datetime import datetime
 
-from ..connectors.salesforce import SalesforceConnector
+from ..connectors.registry import get_sfdc
 from ..models import ComplianceReport, SanctionsResult, Tier
 
 logger = logging.getLogger(__name__)
-sfdc: SalesforceConnector = SalesforceConnector()
 
 
 async def check_sanctions(org_name: str, country: str, org_id: str = "") -> dict:
@@ -38,15 +37,15 @@ async def check_sanctions(org_name: str, country: str, org_id: str = "") -> dict
     # If we have an org_id, look up the org to get the current screening status
     org = None
     if org_id:
-        org = await sfdc.get_org(org_id)
+        org = await get_sfdc().get_org(org_id)
 
     # In live mode, query the Descartes screening field from SFDC
     # The field name will need to be confirmed during sandbox validation
     # For now, return the org's status if available
     if org:
-        # TODO: Once SFDC sandbox is connected, read the actual Descartes
+        # See TODO-TRACKER.md — tracked for production phase
+        # Once SFDC sandbox is connected, read the actual Descartes
         # screening result field (e.g., Screening_Status__c, Descartes_Result__c).
-        # For now, return clear status since Descartes handles this at intake.
         result = SanctionsResult(
             org_name=org.org_name,
             country=org.country,
@@ -92,7 +91,7 @@ async def check_tax_exempt_status(org_id: str) -> dict:
     Returns:
         Tax-exempt status report.
     """
-    org = await sfdc.get_org(org_id)
+    org = await get_sfdc().get_org(org_id)
     if not org:
         return {"error": "ORG_NOT_FOUND", "message": f"No org found with ID '{org_id}'"}
 
@@ -119,7 +118,7 @@ async def get_compliance_report(org_id: str) -> dict:
     Returns:
         Comprehensive compliance report.
     """
-    org = await sfdc.get_org(org_id)
+    org = await get_sfdc().get_org(org_id)
     if not org:
         return {"error": "ORG_NOT_FOUND", "message": f"No org found with ID '{org_id}'"}
 
@@ -152,7 +151,7 @@ async def flag_compliance_issue(org_id: str, issue_type: str, details: str) -> d
     Returns:
         Confirmation of ticket creation with tracking ID.
     """
-    org = await sfdc.get_org(org_id)
+    org = await get_sfdc().get_org(org_id)
     org_name = org.org_name if org else f"Unknown ({org_id})"
 
     # In production, create a Jira ticket or internal compliance system entry

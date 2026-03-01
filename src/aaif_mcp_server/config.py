@@ -300,3 +300,227 @@ MOCK_SANCTIONS_LIST: list[dict] = [
     {"name": "Restricted Entity GmbH", "list": "EU Sanctions", "country": "BY",
      "reason": "Council Regulation (EU) 2025/XXX"},
 ]
+
+
+# ── Mock Calendar Events ──────────────────────────────────────────
+MOCK_CALENDAR_EVENTS: dict[str, list[dict]] = {
+    "C001": [  # Takeshi Yamada (Hitachi, Gold voting)
+        {"event_id": "evt-001", "title": "AAIF Governing Board Meeting", "schedule": "1st Mon 10am PT", "zoom_link": "https://zoom.us/j/aaif-gb"},
+        {"event_id": "evt-002", "title": "AAIF Members All-Hands", "schedule": "Last Fri 9am PT", "zoom_link": "https://zoom.us/j/aaif-allhands"},
+    ],
+    "C002": [  # Yuki Tanaka (Hitachi, Gold technical)
+        {"event_id": "evt-002", "title": "AAIF Members All-Hands", "schedule": "Last Fri 9am PT", "zoom_link": "https://zoom.us/j/aaif-allhands"},
+    ],
+    "C003": [  # Sambhav Kothari (Bloomberg, Gold voting)
+        {"event_id": "evt-001", "title": "AAIF Governing Board Meeting", "schedule": "1st Mon 10am PT", "zoom_link": "https://zoom.us/j/aaif-gb"},
+        {"event_id": "evt-002", "title": "AAIF Members All-Hands", "schedule": "Last Fri 9am PT", "zoom_link": "https://zoom.us/j/aaif-allhands"},
+    ],
+}
+
+MOCK_CALENDAR_RULES: dict[str, dict[str, list[str]]] = {
+    "aaif": {
+        "platinum_voting_contact": ["AAIF Governing Board Meeting", "AAIF Technical Committee", "AAIF Members All-Hands"],
+        "gold_voting_contact": ["AAIF Governing Board Meeting", "AAIF Members All-Hands"],
+        "gold_technical_contact": ["AAIF Members All-Hands"],
+        "silver_primary_contact": ["AAIF Members All-Hands"],
+    }
+}
+
+
+# ── Mock WG Enrollments ───────────────────────────────────────────
+MOCK_WG_ENROLLMENTS: dict[str, list[str]] = {
+    # contact_id → list of wg_ids
+    "C001": ["wg-agentic-commerce"],
+    "C002": ["wg-agentic-commerce", "wg-accuracy-reliability"],
+    "C003": ["wg-identity-trust"],
+    "C005": [],  # Natoma not yet enrolled
+    "C007": ["wg-agentic-commerce", "wg-identity-trust", "wg-observability"],
+}
+
+
+# ── Mock LF Staff ─────────────────────────────────────────────────
+MOCK_LF_STAFF: dict[str, dict] = {
+    "staff-001": {"name": "Jennifer Tarnate", "role": "Membership", "email": "jtarnate@linuxfoundation.org", "timezone": "America/Los_Angeles"},
+    "staff-002": {"name": "Candy Tan", "role": "Onboarding Coordinator", "email": "ctan@linuxfoundation.org", "timezone": "America/Los_Angeles"},
+    "staff-003": {"name": "Christina Harter", "role": "Operations/PM", "email": "chartner@linuxfoundation.org", "timezone": "America/New_York"},
+}
+
+
+# ── Mock Onboarding Calls ────────────────────────────────────────
+MOCK_ONBOARDING_CALLS: dict[str, dict] = {
+    "0017V00001HITACHI": {"meeting_id": "mtg-001", "status": "completed", "scheduled_at": "2026-01-10T10:00:00Z", "attendees": ["t.yamada@hitachi.com", "jtarnate@linuxfoundation.org"], "zoom_link": "https://zoom.us/j/onboard-hitachi"},
+    "0017V00001BLOOMBERG": {"meeting_id": "mtg-002", "status": "scheduled", "scheduled_at": "2026-03-05T14:00:00Z", "attendees": ["skothari@bloomberg.net", "ctan@linuxfoundation.org"], "zoom_link": "https://zoom.us/j/onboard-bloomberg"},
+    "0017V00001NATOMA": {"meeting_id": None, "status": "pending", "scheduled_at": None, "attendees": [], "zoom_link": None},
+}
+
+
+# ── Mock Elections ────────────────────────────────────────────────
+MOCK_ELECTIONS: dict[str, dict] = {
+    "elec-001": {
+        "election_id": "elec-001",
+        "wg_id": "wg-agentic-commerce",
+        "wg_name": "Agentic Commerce",
+        "position": "WG Chair",
+        "state": "voting",  # nominations, voting, complete
+        "nomination_end": "2026-02-15",
+        "voting_start": "2026-02-16",
+        "voting_end": "2026-03-15",
+        "candidates": [
+            {"contact_id": "C001", "name": "Takeshi Yamada", "org": "Hitachi, Ltd.", "tier": "gold", "eligible": True},
+            {"contact_id": "C003", "name": "Sambhav Kothari", "org": "Bloomberg LP", "tier": "gold", "eligible": True},
+        ],
+        "total_eligible_voters": 4,
+        "votes_cast": 2,
+    },
+    "elec-002": {
+        "election_id": "elec-002",
+        "wg_id": "wg-identity-trust",
+        "wg_name": "Identity & Trust",
+        "position": "WG Chair",
+        "state": "complete",
+        "nomination_end": "2026-01-10",
+        "voting_start": "2026-01-11",
+        "voting_end": "2026-01-25",
+        "candidates": [
+            {"contact_id": "C007", "name": "Sam Altman", "org": "OpenAI", "tier": "platinum", "eligible": True},
+        ],
+        "total_eligible_voters": 3,
+        "votes_cast": 3,
+        "winner": {"contact_id": "C007", "name": "Sam Altman"},
+    },
+}
+
+# ── Mock Press Release Templates ──────────────────────────────────
+MOCK_PR_TEMPLATES: dict[str, dict] = {
+    "new-member-announcement": {
+        "template_id": "new-member-announcement",
+        "name": "New Member Announcement",
+        "description": "Standard press release for announcing a new AAIF member",
+        "fields": ["org_name", "tier", "quote_contact", "quote_text", "about_org"],
+    },
+    "project-milestone": {
+        "template_id": "project-milestone",
+        "name": "Project Milestone",
+        "description": "Announce a project release or milestone",
+        "fields": ["project_name", "milestone", "version", "highlights"],
+    },
+}
+
+MOCK_PRESS_RELEASES: dict[str, dict] = {
+    "pr-001": {
+        "pr_id": "pr-001",
+        "org_id": "0017V00001HITACHI",
+        "template_id": "new-member-announcement",
+        "state": "approved",
+        "created_at": "2026-01-15",
+        "stages": [
+            {"stage": "draft", "status": "complete", "completed_at": "2026-01-15"},
+            {"stage": "pmo_review", "status": "complete", "completed_at": "2026-01-16", "reviewer": "Jennifer Tarnate"},
+            {"stage": "comms_review", "status": "complete", "completed_at": "2026-01-18", "reviewer": "Comms Team"},
+            {"stage": "legal_review", "status": "complete", "completed_at": "2026-01-20", "reviewer": "Legal"},
+        ],
+    },
+}
+
+# ── Mock Brand Guidelines ─────────────────────────────────────────
+MOCK_BRAND_GUIDELINES: dict[str, dict] = {
+    "aaif": {
+        "foundation": "AI & Agentic Infrastructure Foundation",
+        "logo_requirements": {
+            "format": "SVG preferred; PNG accepted as fallback",
+            "min_dimensions": "1000x1000 pixels (for raster formats)",
+            "color_space": "sRGB",
+            "background": "Transparent background required",
+            "file_size_max": "5MB",
+        },
+        "brand_colors": {
+            "primary": "#0066CC",
+            "secondary": "#00AA55",
+            "accent": "#FF6600",
+        },
+        "usage_guidelines": "Logo must maintain clear space equal to the height of the 'A' in AAIF on all sides.",
+        "website": "https://aaif.io",
+    },
+}
+
+MOCK_LOGO_STATUS: dict[str, dict] = {
+    "0017V00001HITACHI": {"status": "validated", "format": "SVG", "dimensions": "2000x2000", "issues": []},
+    "0017V00001BLOOMBERG": {"status": "validated", "format": "SVG", "dimensions": "1500x1500", "issues": []},
+    "0017V00001NATOMA": {"status": "pending", "format": None, "dimensions": None, "issues": ["Logo not yet submitted"]},
+    "0017V00001OPENAI": {"status": "validated", "format": "SVG", "dimensions": "3000x3000", "issues": []},
+}
+
+# ── Mock Engagement Data ──────────────────────────────────────────
+MOCK_ENGAGEMENT_DATA: dict[str, dict] = {
+    "0017V00001HITACHI": {
+        "meeting_attendance_rate": 0.85,
+        "wg_participation_count": 2,
+        "github_commits_30d": 15,
+        "slack_messages_30d": 42,
+        "last_activity": "2026-02-27",
+    },
+    "0017V00001BLOOMBERG": {
+        "meeting_attendance_rate": 0.70,
+        "wg_participation_count": 1,
+        "github_commits_30d": 8,
+        "slack_messages_30d": 25,
+        "last_activity": "2026-02-25",
+    },
+    "0017V00001NATOMA": {
+        "meeting_attendance_rate": 0.20,
+        "wg_participation_count": 0,
+        "github_commits_30d": 0,
+        "slack_messages_30d": 3,
+        "last_activity": "2026-02-01",
+    },
+    "0017V00001IPROOV": {
+        "meeting_attendance_rate": 0.50,
+        "wg_participation_count": 1,
+        "github_commits_30d": 5,
+        "slack_messages_30d": 12,
+        "last_activity": "2026-02-20",
+    },
+    "0017V00001OPENAI": {
+        "meeting_attendance_rate": 0.95,
+        "wg_participation_count": 3,
+        "github_commits_30d": 45,
+        "slack_messages_30d": 120,
+        "last_activity": "2026-02-28",
+    },
+}
+
+
+# ── Config Validation ──────────────────────────────────────────────
+
+def validate_config() -> list[str]:
+    """Validate all config data at startup. Returns list of warnings.
+
+    Checks:
+    - MOCK_MEMBERS have required fields (org_name, contacts)
+    - TIER_ENTITLEMENTS exist for all standard tiers (platinum, gold, silver)
+    - PROVISIONING_RULES reference valid lists and have defined rules
+
+    Returns:
+        List of warning strings. Empty list if no issues found.
+    """
+    warnings = []
+
+    # Check MOCK_MEMBERS have required fields
+    for org_id, org in MOCK_MEMBERS.items():
+        if not org.org_name:
+            warnings.append(f"MOCK_MEMBERS[{org_id}]: missing org_name")
+        if not org.contacts:
+            warnings.append(f"MOCK_MEMBERS[{org_id}]: no contacts defined")
+
+    # Check TIER_ENTITLEMENTS exist for all tiers
+    for foundation_id, tiers in TIER_ENTITLEMENTS.items():
+        for tier_name in ["platinum", "gold", "silver"]:
+            if tier_name not in tiers:
+                warnings.append(f"TIER_ENTITLEMENTS[{foundation_id}]: missing '{tier_name}' tier")
+
+    # Check PROVISIONING_RULES reference valid lists
+    for foundation_id, rules_config in PROVISIONING_RULES.items():
+        if not rules_config.rules:
+            warnings.append(f"PROVISIONING_RULES[{foundation_id}]: no rules defined")
+
+    return warnings
