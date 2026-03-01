@@ -436,7 +436,12 @@ def main():
     logger.info("Registered 16 tools, 7 resources, 3 prompts")
 
     if transport == "streamable-http":
-        mcp.run(transport="streamable-http")
+        import uvicorn
+        host = os.environ.get("FASTMCP_HOST", "0.0.0.0")
+        port = int(os.environ.get("FASTMCP_PORT", os.environ.get("PORT", "8080")))
+        logger.info(f"Binding to {host}:{port}")
+        app = mcp.streamable_http_app()
+        uvicorn.run(app, host=host, port=port)
     else:
         mcp.run(transport="stdio")
 
