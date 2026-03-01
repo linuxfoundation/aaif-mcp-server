@@ -2,6 +2,7 @@
 
 Provides:
 - Async test support via pytest-asyncio
+- Connector registry initialization (auto-used)
 - Tool function imports and exposure
 - Mock org_id and contact fixtures
 - Foundation ID defaults
@@ -10,6 +11,7 @@ Provides:
 from __future__ import annotations
 
 import pytest
+import pytest_asyncio
 
 # Import all tool functions for use in tests
 from aaif_mcp_server.tools.tier_validation import (
@@ -45,6 +47,54 @@ from aaif_mcp_server.resources.member import (
     get_member_profile,
     list_members,
 )
+from aaif_mcp_server.tools.contact_roles import (
+    list_contacts,
+    add_contact,
+    update_contact_role,
+    remove_contact,
+    transfer_voting_rights,
+)
+from aaif_mcp_server.tools.calendar import (
+    provision_calendar_invites,
+    update_meeting_schedule,
+    get_upcoming_meetings,
+)
+from aaif_mcp_server.tools.wg_enrollment import (
+    enroll_in_working_group,
+    leave_working_group,
+    list_available_working_groups,
+    get_wg_members,
+    check_wg_eligibility,
+)
+from aaif_mcp_server.tools.call_scheduling import (
+    schedule_onboarding_call,
+    reschedule_onboarding_call,
+    get_onboarding_call_status,
+)
+from aaif_mcp_server.tools.elections import (
+    create_election,
+    validate_candidate_eligibility,
+    check_voter_eligibility,
+    get_election_status,
+    diagnose_ballot_access,
+)
+from aaif_mcp_server.tools.press_release import (
+    draft_press_release,
+    get_press_release_status,
+    list_press_release_templates,
+)
+from aaif_mcp_server.tools.logo_brand import (
+    validate_logo,
+    get_brand_guidelines,
+    request_logo_upload,
+)
+from aaif_mcp_server.tools.renewal_intelligence import (
+    get_renewal_status,
+    get_engagement_score,
+    predict_churn_risk,
+    get_renewal_dashboard,
+    trigger_renewal_outreach,
+)
 
 # Expose tool functions for pytest
 __all__ = [
@@ -69,6 +119,38 @@ __all__ = [
     "get_working_groups",
     "get_member_profile",
     "list_members",
+    "list_contacts",
+    "add_contact",
+    "update_contact_role",
+    "remove_contact",
+    "transfer_voting_rights",
+    "provision_calendar_invites",
+    "update_meeting_schedule",
+    "get_upcoming_meetings",
+    "enroll_in_working_group",
+    "leave_working_group",
+    "list_available_working_groups",
+    "get_wg_members",
+    "check_wg_eligibility",
+    "schedule_onboarding_call",
+    "reschedule_onboarding_call",
+    "get_onboarding_call_status",
+    "create_election",
+    "validate_candidate_eligibility",
+    "check_voter_eligibility",
+    "get_election_status",
+    "diagnose_ballot_access",
+    "draft_press_release",
+    "get_press_release_status",
+    "list_press_release_templates",
+    "validate_logo",
+    "get_brand_guidelines",
+    "request_logo_upload",
+    "get_renewal_status",
+    "get_engagement_score",
+    "predict_churn_risk",
+    "get_renewal_dashboard",
+    "trigger_renewal_outreach",
 ]
 
 
@@ -79,6 +161,22 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "asyncio: mark test as async (pytest-asyncio)"
     )
+
+
+# ── Connector Registry Initialization ─────────────────────────────
+
+@pytest_asyncio.fixture(autouse=True, scope="session")
+async def _init_connectors():
+    """Initialize the connector registry once for the entire test session.
+
+    This fixture is auto-used (applies to every test) and session-scoped
+    (runs once). It ensures all 7 connectors are created and initialized
+    (in mock mode) before any tool function is called.
+    """
+    from aaif_mcp_server.connectors.registry import initialize_connectors, shutdown_connectors
+    await initialize_connectors()
+    yield
+    await shutdown_connectors()
 
 
 # ── Fixtures: Foundation and Org IDs ────────────────────────────────
