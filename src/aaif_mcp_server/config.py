@@ -90,6 +90,22 @@ WORKING_GROUPS: dict[str, list[WorkingGroup]] = {
             github_repo="aaif/wg-workflows",
             access_policy=WgAccessPolicy.any_member,
         ),
+        WorkingGroup(
+            wg_id="wg-governance-risk-regulatory", name="Governance, Risk & Regulatory Alignment",
+            slug="governance-risk-regulatory", meeting_schedule="Thu 10am PT (biweekly)",
+            mailing_list="wg-governance-risk-regulatory@lists.aaif.io",
+            discord_channel="#wg-governance-risk-regulatory",
+            github_repo="aaif/wg-governance-risk-and-regulatory",
+            access_policy=WgAccessPolicy.any_member,
+        ),
+        WorkingGroup(
+            wg_id="wg-security-privacy", name="Security & Privacy",
+            slug="security-privacy", meeting_schedule="Tue 10am PT (biweekly)",
+            mailing_list="wg-security-privacy@lists.aaif.io",
+            discord_channel="#wg-security-privacy",
+            github_repo="aaif/wg-security-and-privacy",
+            access_policy=WgAccessPolicy.any_member,
+        ),
     ]
 }
 
@@ -331,10 +347,10 @@ MOCK_CALENDAR_RULES: dict[str, dict[str, list[str]]] = {
 MOCK_WG_ENROLLMENTS: dict[str, list[str]] = {
     # contact_id → list of wg_ids
     "C001": ["wg-agentic-commerce"],
-    "C002": ["wg-agentic-commerce", "wg-accuracy-reliability"],
+    "C002": ["wg-agentic-commerce", "wg-accuracy-reliability", "wg-governance-risk-regulatory"],
     "C003": ["wg-identity-trust"],
     "C005": [],  # Natoma not yet enrolled
-    "C007": ["wg-agentic-commerce", "wg-identity-trust", "wg-observability"],
+    "C007": ["wg-agentic-commerce", "wg-identity-trust", "wg-observability", "wg-security-privacy"],
 }
 
 

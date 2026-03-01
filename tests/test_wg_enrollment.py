@@ -144,3 +144,51 @@ async def test_check_wg_eligibility_contact_not_found(foundation_id: str):
 
     assert "error" in result
     assert result["error"] == "CONTACT_NOT_FOUND"
+
+
+@pytest.mark.asyncio
+async def test_list_working_groups_returns_seven(
+    contact_hitachi_c001: str,
+    foundation_id: str,
+):
+    """Test that list_available_working_groups returns all 7 WGs."""
+    result = await list_available_working_groups(contact_hitachi_c001, foundation_id)
+
+    assert "error" not in result
+    wgs = result.get("available_working_groups", [])
+    assert len(wgs) == 7
+    wg_ids = [wg["wg_id"] for wg in wgs]
+    assert "wg-governance-risk-regulatory" in wg_ids
+    assert "wg-security-privacy" in wg_ids
+
+
+@pytest.mark.asyncio
+async def test_enroll_in_governance_risk_wg(
+    contact_hitachi_c001: str,
+    foundation_id: str,
+):
+    """Test dry-run enrollment in Governance, Risk & Regulatory WG."""
+    result = await enroll_in_working_group(
+        contact_hitachi_c001,
+        "wg-governance-risk-regulatory",
+        dry_run=True,
+        foundation_id=foundation_id,
+    )
+
+    assert "error" not in result
+
+
+@pytest.mark.asyncio
+async def test_enroll_in_security_privacy_wg(
+    contact_hitachi_c001: str,
+    foundation_id: str,
+):
+    """Test dry-run enrollment in Security & Privacy WG."""
+    result = await enroll_in_working_group(
+        contact_hitachi_c001,
+        "wg-security-privacy",
+        dry_run=True,
+        foundation_id=foundation_id,
+    )
+
+    assert "error" not in result
