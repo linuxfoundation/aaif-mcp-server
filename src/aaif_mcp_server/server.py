@@ -441,7 +441,10 @@ def main():
         port = int(os.environ.get("FASTMCP_PORT", os.environ.get("PORT", "8080")))
         logger.info(f"Binding to {host}:{port}")
         app = mcp.streamable_http_app()
-        uvicorn.run(app, host=host, port=port)
+        uvicorn.run(
+            app, host=host, port=port,
+            proxy_headers=True, forwarded_allow_ips="*",
+        )
     else:
         mcp.run(transport="stdio")
 
