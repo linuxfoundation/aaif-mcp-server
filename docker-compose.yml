@@ -1,0 +1,49 @@
+version: '3.9'
+
+services:
+  aaif-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # Transport configuration
+      AAIF_MCP_TRANSPORT: streamable-http
+      AAIF_MCP_LOG_LEVEL: INFO
+
+      # API authentication (dev defaults)
+      AAIF_MCP_API_KEY: dev-key-not-for-production
+      AAIF_MCP_ENFORCE_AUTH: "false"
+
+      # Salesforce configuration (optional - uses mock data if not set)
+      SFDC_INSTANCE_URL: ${SFDC_INSTANCE_URL:-}
+      SFDC_CLIENT_ID: ${SFDC_CLIENT_ID:-}
+      SFDC_CLIENT_SECRET: ${SFDC_CLIENT_SECRET:-}
+      SFDC_USERNAME: ${SFDC_USERNAME:-}
+      SFDC_PASSWORD: ${SFDC_PASSWORD:-}
+
+      # Groups.io configuration (optional - uses mock data if not set)
+      GROUPSIO_TOKEN: ${GROUPSIO_TOKEN:-}
+      GROUPSIO_API_URL: ${GROUPSIO_API_URL:-https://api.groups.io/v2}
+
+      # Application configuration
+      AAIF_FOUNDATION_ID: ${AAIF_FOUNDATION_ID:-aaif}
+      AAIF_OFAC_CACHE_DIR: /tmp/ofac_cache
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    restart: unless-stopped
+
+    # Optional: Volume mount for OFAC cache persistence across restarts
+    volumes:
+      - ofac_cache:/tmp/ofac_cache
+
+volumes:
+  ofac_cache:
+    driver: local
