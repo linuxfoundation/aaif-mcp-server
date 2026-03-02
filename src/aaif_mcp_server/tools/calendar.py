@@ -1,11 +1,13 @@
 from __future__ import annotations
-"""Domain 2: Calendar & Meeting Management — 3 tools.
+"""Domain 6: Meetings & Scheduling — 3 tools.
 
 Maps to: Deliverable D3 (Participation Enablement)
-PRD Requirements: CAL-1 through CAL-3
+PRD Requirements: MTG-1 through MTG-3
 
-These tools manage calendar invites and meeting schedules for working groups
-and board meetings. Uses the Google Calendar connector for sending invites.
+These tools manage meeting invites and schedules for working groups
+and board meetings. Renamed from "Calendar" per Nirav's feedback —
+the domain is about meetings, not about the calendar system itself.
+Uses the Google Calendar connector under the hood for sending invites.
 """
 
 from ..connectors.registry import get_sfdc, get_calendar
@@ -16,7 +18,7 @@ from ..models import ContactRole, Tier
 async def provision_calendar_invites(
     org_id: str, contact_id: str, dry_run: bool = True, foundation_id: str = "aaif"
 ) -> dict:
-    """Send calendar invites for all meetings a contact is eligible to attend.
+    """Send meeting invites for all meetings a contact is eligible to attend.
 
     Based on the contact's tier and role, determines which meetings they should
     receive invites for (board meetings, all-hands, WG meetings, etc.).

@@ -178,18 +178,29 @@ async def _execute_checklist_step(
     actual tool functions with proper error handling and retries.
     """
     # Import tools locally to avoid circular imports
-    if tool_name == "validate_membership_tier":
+    if tool_name == "send_welcome_email":
+        # Welcome email is now step 1 of D1 — sent via HubSpot on activation.
+        from ..connectors.registry import get_hubspot
+        result = await get_hubspot().send_email(
+            to=contact.email,
+            template_id="welcome-new-member",
+            merge_fields={"org_id": org_id, "contact_name": contact.name},
+        )
+        return {
+            "status": "success" if result.get("status") == "sent" else "mock_sent",
+            "message": f"Welcome email sent to {contact.email} via HubSpot",
+            "template": "welcome-new-member",
+        }
+
+    elif tool_name == "validate_membership_tier":
+        # Auto-executes as background verification (not a manual gate).
+        # Per Nirav: tier was set during sales — this just confirms SFDC matches.
         from .tier_validation import validate_membership_tier
         return await validate_membership_tier(org_id, foundation_id)
 
-    elif tool_name == "check_sanctions":
-        from .compliance import check_sanctions
-        org = await get_sfdc().get_org(org_id)
-        return await check_sanctions(org.org_name, org.country, org_id)
-
-    elif tool_name == "check_tax_exempt_status":
-        from .compliance import check_tax_exempt_status
-        return await check_tax_exempt_status(org_id)
+    # NOTE: check_sanctions and check_tax_exempt_status REMOVED from onboarding flow.
+    # Per Nirav's feedback (March 2, 2026): compliance screening happens pre-membership
+    # via Descartes/SFDC integration at intake. By onboarding time, org is already cleared.
 
     elif tool_name == "provision_mailing_lists":
         from .mailing_list import provision_mailing_lists

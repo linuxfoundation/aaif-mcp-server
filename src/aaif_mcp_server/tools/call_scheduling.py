@@ -1,11 +1,13 @@
 from __future__ import annotations
-"""Domain 10: Onboarding Call Scheduling — 3 tools.
+"""Domain 8: Onboarding Call Scheduling — 3 tools.
 
 Maps to: Deliverable D4 (Orientation & Initial Outreach)
 PRD Requirements: SCHED-1 through SCHED-3
 
 These tools schedule, reschedule, and track onboarding calls between LF staff
-and new member contacts. Uses the Calendar connector for sending invites.
+and new member contacts. Per Nirav's feedback: HubSpot is the primary tool
+for scheduling onboarding calls (via meeting links in welcome sequences).
+Uses the Calendar connector under the hood for sending calendar invites.
 """
 
 from datetime import datetime
@@ -19,6 +21,9 @@ async def schedule_onboarding_call(
     org_id: str, contact_ids_str: str, lf_staff_ids_str: str = "", foundation_id: str = "aaif"
 ) -> dict:
     """Schedule an onboarding call with member contacts and LF staff.
+
+    Uses HubSpot meeting links for scheduling (per Nirav's feedback).
+    Calendar invites are sent automatically once the meeting is booked.
 
     Args:
         org_id: Salesforce organization ID

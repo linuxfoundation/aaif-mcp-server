@@ -138,7 +138,7 @@ def _build_catalog() -> dict[str, list[Callable]]:
             remove_contact,
             transfer_voting_rights,
         ],
-        "Domain 6: Calendar & Meeting Management": [
+        "Domain 6: Meetings & Scheduling": [
             provision_calendar_invites,
             update_meeting_schedule,
             get_upcoming_meetings,

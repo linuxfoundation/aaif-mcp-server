@@ -1,11 +1,16 @@
 from __future__ import annotations
-"""Domain 6: Working Group Enrollment — 5 tools.
+"""Domain 7: Working Group Enrollment — 5 tools.
 
 Maps to: Deliverable D3 (Participation Enablement)
 PRD Requirements: WGE-1 through WGE-5
 
 These tools manage enrollment across multiple systems (mailing lists, Discord,
 GitHub, calendar). Enrollment happens across all systems; removal is the inverse.
+
+Per Nirav's feedback: WG enrollment may be self-service (member-facing via
+Intercom) or manual (PMO staff via PCC). The `caller_role` parameter enables
+future routing — when called from a member context, enrollment follows the
+self-service flow; when called from PMO context, it follows the manual flow.
 """
 
 from ..connectors.registry import get_sfdc, get_groupsio, get_discord, get_github
@@ -22,7 +27,11 @@ async def enroll_in_working_group(
     - Mailing list
     - Discord channel
     - GitHub repository
-    - Calendar invites for WG meetings
+    - Meeting invites for WG meetings
+
+    This tool supports both self-service (member-initiated via Intercom)
+    and manual (PMO staff via PCC) enrollment flows. The caller context
+    determines which flow is used.
 
     Args:
         contact_id: Contact ID

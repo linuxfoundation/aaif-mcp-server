@@ -151,15 +151,20 @@ CHECKLIST_TEMPLATES: dict[str, ChecklistTemplate] = {
                 "id": "D1", "name": "Agreement & Membership Activation",
                 "effort": "1-2", "target": "1-5 days (member signature dependent)",
                 "items": [
+                    # Welcome email is now step 1 — sent immediately on membership activation.
+                    # Per Nirav: this is the first thing that happens, via HubSpot.
                     ChecklistItem(id="D1-1", deliverable=DeliverableId.D1,
-                                  text="Membership tier validated", effort="<1",
-                                  automated=True, tool="validate_membership_tier").model_dump(),
+                                  text="Welcome email sent via HubSpot", effort="<1",
+                                  automated=True, tool="send_welcome_email").model_dump(),
+                    # Tier validation auto-executes as a background check (not a manual step).
+                    # Per Nirav: tier was already set during sales — just verify it matches SFDC.
                     ChecklistItem(id="D1-2", deliverable=DeliverableId.D1,
-                                  text="Sanctions/compliance screening clear", effort="<1",
-                                  automated=True, tool="check_sanctions").model_dump(),
-                    ChecklistItem(id="D1-3", deliverable=DeliverableId.D1,
-                                  text="Tax-exempt status verified (if applicable)", effort="<1",
-                                  automated=True, tool="check_tax_exempt_status").model_dump(),
+                                  text="Membership tier auto-verified from SFDC", effort="<1",
+                                  automated=True, tool="validate_membership_tier").model_dump(),
+                    # Compliance checks REMOVED from post-membership flow.
+                    # Per Nirav: sanctions/OFAC screening happens PRE-membership via
+                    # Descartes integration in Salesforce at intake. By the time onboarding
+                    # runs, the org has already cleared compliance. No need to re-check.
                 ],
             },
             {
@@ -185,7 +190,7 @@ CHECKLIST_TEMPLATES: dict[str, ChecklistTemplate] = {
                                   text="Mailing lists provisioned", effort="<1",
                                   automated=True, tool="provision_mailing_lists").model_dump(),
                     ChecklistItem(id="D3-2", deliverable=DeliverableId.D3,
-                                  text="Calendar invites sent", effort="<1",
+                                  text="Meeting invites sent", effort="<1",
                                   automated=True, tool="provision_calendar_invites").model_dump(),
                     ChecklistItem(id="D3-3", deliverable=DeliverableId.D3,
                                   text="Working group enrollment complete", effort="<1",
@@ -202,12 +207,14 @@ CHECKLIST_TEMPLATES: dict[str, ChecklistTemplate] = {
                 "id": "D4", "name": "Orientation & Initial Outreach",
                 "effort": "1", "target": "1-2 business days",
                 "items": [
+                    # Welcome email moved to D1-1 (first thing on activation).
+                    # D4 now focuses on the onboarding call, scheduled via HubSpot.
                     ChecklistItem(id="D4-1", deliverable=DeliverableId.D4,
-                                  text="Welcome email sent", effort="<1",
-                                  automated=True, tool=None).model_dump(),
-                    ChecklistItem(id="D4-2", deliverable=DeliverableId.D4,
-                                  text="Onboarding call scheduled", effort="<1",
+                                  text="Onboarding call scheduled via HubSpot", effort="<1",
                                   automated=True, tool="schedule_onboarding_call").model_dump(),
+                    ChecklistItem(id="D4-2", deliverable=DeliverableId.D4,
+                                  text="Onboarding call completed", effort="1",
+                                  automated=False, tool=None).model_dump(),
                 ],
             },
             {
