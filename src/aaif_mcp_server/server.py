@@ -1,16 +1,16 @@
 from __future__ import annotations
-"""AAIF Member Onboarding MCP Server — main entry point.
+"""AAIF PMO Agent — MCP Server entry point.
 
 Registers all tools, resources, and prompts with the FastMCP framework.
 Supports two transports:
-  - stdio  (default, for Claude Desktop / Claude Code)
-  - streamable-http (for web-based MCP clients)
+  - stdio  (default, for Cowork plugin, Goose, local dev)
+  - streamable-http (for LFX PCC, Intercom Fin, Agno agents)
 
 Usage:
-  # Claude Desktop (stdio)
+  # Local / Cowork (stdio)
   python -m aaif_mcp_server.server
 
-  # Streamable HTTP
+  # Streamable HTTP (PCC, Intercom)
   AAIF_MCP_TRANSPORT=streamable-http python -m aaif_mcp_server.server
 """
 
@@ -31,7 +31,7 @@ logger = logging.getLogger("aaif_mcp_server")
 
 # ── Server Instance ───────────────────────────────────────────────
 # Disable DNS rebinding protection when running behind a reverse proxy
-# (Railway, Cloud Run, etc.) so external host headers are accepted.
+# (Cloud Run, etc.) so external host headers are accepted.
 _transport = os.environ.get("AAIF_MCP_TRANSPORT", "stdio")
 _security = None
 if _transport == "streamable-http":

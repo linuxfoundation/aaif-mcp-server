@@ -1,0 +1,14 @@
+# AAIF PMO Agent MCP Server — Code Owners
+# These owners will be requested for review on all PRs
+
+# Default owner for everything
+* @manishdixitlfx
+
+# Infrastructure and deployment
+Dockerfile @manishdixitlfx
+docker-compose.yml @manishdixitlfx
+deploy-cloudrun.sh @manishdixitlfx
+fly.toml @manishdixitlfx
+
+# CI/CD
+.github/ @manishdixitlfx

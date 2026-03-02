@@ -1,8 +1,9 @@
 [project]
 name = "aaif-mcp-server"
 version = "0.1.0"
-description = "AAIF Member Onboarding MCP Server — unified API for 48 onboarding tools across any AI client"
+description = "AAIF PMO Agent — MCP Server powering 49 onboarding tools for LFX PCC, Cowork, Intercom Fin, and other MCP clients"
 readme = "README.md"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.10"
 dependencies = [
     "mcp[cli]>=1.2.0",

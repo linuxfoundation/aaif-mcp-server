@@ -1,8 +1,15 @@
-# AAIF Member Onboarding MCP Server
+# AAIF PMO Agent — MCP Server
 
-48 tools across 12 domains for automating Linux Foundation AAIF member onboarding — tier validation, compliance screening, mailing list provisioning, contact management, calendar scheduling, working group enrollment, elections, press releases, brand validation, renewal intelligence, and D1-D5 checklist orchestration.
+49 tools across 12 domains for automating Linux Foundation AAIF member onboarding — tier validation, compliance screening, mailing list provisioning, contact management, calendar scheduling, working group enrollment, elections, press releases, brand validation, renewal intelligence, and D1-D5 checklist orchestration.
 
-Runs in **Claude Desktop**, **Claude Code**, **Goose**, or any MCP client.
+The same MCP server powers multiple clients:
+
+| Client | Audience | How It Connects |
+|--------|----------|-----------------|
+| **LFX PCC** | PMO staff (day-to-day operations) | MCP client in the PCC operations dashboard |
+| **Cowork Plugin** | Executives & leadership (oversight, status, ad-hoc questions) | Drag-and-drop plugin for Claude Desktop's Cowork tab |
+| **Intercom Fin** | Members (self-service onboarding, FAQ) | MCP data connector for the member-facing chatbot |
+| **Goose** | Developers (optional) | Open-source MCP client for local development |
 
 > **Sandbox Mode**: This server runs entirely on **mock data** by default. No backend credentials or API access needed to demo all 48 tools. Each connector auto-falls back to mock when its environment variables are unset.
 
@@ -11,7 +18,7 @@ Runs in **Claude Desktop**, **Claude Code**, **Goose**, or any MCP client.
 ### 1. Clone and install
 
 ```bash
-git clone git@github.com:LF-Engineering/aaif-mcp-server.git
+git clone git@github.com:linuxfoundation/aaif-mcp-server.git
 cd aaif-mcp-server
 pip install -e ".[test]"
 ```
@@ -45,7 +52,7 @@ Open **Settings > Developer > Edit Config** in Claude Desktop, then add this to 
 
 ### 3. Restart Claude Desktop
 
-After restarting, you should see 48 tools available. The server runs against **mock data** by default — no credentials needed to test.
+After restarting, you should see 49 tools available. The server runs against **mock data** by default — no credentials needed to test.
 
 ## Verify it works
 
@@ -69,7 +76,7 @@ pytest tests/ -v
 
 ---
 
-## Tools (48 across 12 domains)
+## Tools (49 across 12 domains)
 
 ### Domain 1: Mailing List Provisioning (4 tools)
 

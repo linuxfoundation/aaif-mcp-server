@@ -9,6 +9,16 @@ on:
       - main
 
 jobs:
+  dco:
+    name: DCO Check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: DCO Check
+        uses: tim-actions/dco@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   lint:
     name: Lint (ruff)
     runs-on: ubuntu-latest
