@@ -13,7 +13,7 @@ Uses the Calendar connector under the hood for sending calendar invites.
 from datetime import datetime
 from typing import Optional
 
-from ..connectors.registry import get_sfdc, get_calendar
+from ..connectors.registry import get_sfdc, get_calendar, get_pis_meeting
 from ..config import MOCK_LF_STAFF, MOCK_ONBOARDING_CALLS
 
 

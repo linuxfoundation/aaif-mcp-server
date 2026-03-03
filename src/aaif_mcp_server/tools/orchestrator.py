@@ -6,11 +6,14 @@ PRD Requirements: ORCH-1 through ORCH-8
 
 These tools run the full onboarding/offboarding checklists, track status,
 and reconcile data across siloed systems (SFDC, Groups.io, member tracker).
+
+When PIS is configured, offboarding uses PISMeetingConnector to remove
+registrants from LFX Meetings (replacing manual calendar invite removal).
 """
 
 from datetime import datetime
 
-from ..connectors.registry import get_sfdc, get_groupsio
+from ..connectors.registry import get_sfdc, get_groupsio, get_pis_meeting, get_pis_github, get_github
 from ..config import CHECKLIST_TEMPLATES, PROVISIONING_RULES
 from ..models import (
     ChecklistResult, DeliverableId, DeliverableStatus,
@@ -372,14 +375,109 @@ async def run_offboarding_checklist(
                 "status": "completed",
             })
 
-    # Step 2: Flag for manual follow-up (Discord, GitHub, calendar)
+    # Step 2: Remove from LFX Meetings (if PIS configured)
+    pis_meeting = get_pis_meeting()
+    if pis_meeting is not None:
+        if dry_run:
+            contact_meetings = await pis_meeting.get_contact_meetings(contact_email)
+            for mtg in contact_meetings.get("meetings", []):
+                actions.append({
+                    "step": "remove_meeting_registrant",
+                    "meeting_id": mtg["meeting_id"],
+                    "topic": mtg.get("topic", "Unknown"),
+                    "email": contact_email,
+                    "status": "dry_run",
+                    "source": "pis_meeting_v2",
+                })
+        else:
+            removal_results = await pis_meeting.remove_from_all_meetings(contact_email)
+            for r in removal_results:
+                actions.append({
+                    "step": "remove_meeting_registrant",
+                    "meeting_id": r.get("meeting_id"),
+                    "topic": r.get("topic", "Unknown"),
+                    "email": contact_email,
+                    "status": "completed" if r.get("status") == "removed" else r.get("status", "error"),
+                    "source": "pis_meeting_v2",
+                })
+    else:
+        actions.append({
+            "step": "remove_calendar_invites",
+            "status": "manual_required",
+            "note": "Remove from recurring meeting invites (PIS not configured)",
+        })
+
+    # Step 3: Remove from GitHub repos (if PIS GitHub configured, use it to discover repos)
+    pis_github = get_pis_github()
+    if pis_github is not None:
+        # Find the contact to get their GitHub username
+        contact_obj = None
+        for c in org.contacts:
+            if c.email == contact_email:
+                contact_obj = c
+                break
+
+        github_username = contact_obj.github_username if contact_obj and hasattr(contact_obj, "github_username") else None
+
+        if github_username:
+            # Use PIS to list all repos for the project, then remove collaborator from each
+            try:
+                pis_orgs = await pis_github.list_orgs()
+                repos_found = []
+                for pis_org in pis_orgs:
+                    org_name = pis_org.get("organization", "")
+                    if org_name:
+                        repos = await pis_github.list_repos(org_name)
+                        for repo in repos:
+                            repo_name = repo.get("name", "")
+                            if repo_name:
+                                repos_found.append(f"{org_name}/{repo_name}")
+
+                for repo_path in repos_found:
+                    if dry_run:
+                        actions.append({
+                            "step": "remove_github_collaborator",
+                            "repo": repo_path,
+                            "username": github_username,
+                            "status": "dry_run",
+                            "source": "pis_github_v2",
+                        })
+                    else:
+                        parts = repo_path.split("/", 1)
+                        result = await get_github().remove_collaborator(github_username, repo_path)
+                        actions.append({
+                            "step": "remove_github_collaborator",
+                            "repo": repo_path,
+                            "username": github_username,
+                            "status": "completed" if result.get("status") == "removed" else result.get("status", "error"),
+                            "source": "pis_github_v2",
+                        })
+            except Exception as e:
+                actions.append({
+                    "step": "remove_github_access",
+                    "status": "error",
+                    "source": "pis_github_v2",
+                    "error": str(e),
+                    "note": "PIS GitHub repo discovery failed; manual removal required",
+                })
+        else:
+            actions.append({
+                "step": "remove_github_access",
+                "status": "manual_required",
+                "note": "No GitHub username found for contact; manual removal required",
+                "source": "pis_github_v2",
+            })
+    else:
+        actions.append({
+            "step": "remove_github_access",
+            "status": "manual_required",
+            "note": "Remove from GitHub org/repos (PIS GitHub not configured)",
+        })
+
+    # Step 4: Flag remaining manual follow-ups (Discord, CRM)
     manual_steps = [
         {"step": "remove_discord_access", "status": "manual_required",
          "note": "Remove from Discord server/channels"},
-        {"step": "remove_github_access", "status": "manual_required",
-         "note": "Remove from GitHub org/repos"},
-        {"step": "remove_calendar_invites", "status": "manual_required",
-         "note": "Remove from recurring meeting invites"},
         {"step": "update_crm_record", "status": "manual_required",
          "note": f"Update contact status in SFDC (reason: {reason})"},
     ]

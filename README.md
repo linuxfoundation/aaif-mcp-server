@@ -71,7 +71,7 @@ In Claude Desktop, try:
 
 ```bash
 pytest tests/ -v
-# 57 tests, all against mock data
+# 176 tests pass (28 pre-existing failures in tests without registry init)
 ```
 
 ---
@@ -198,15 +198,25 @@ This server connects to **7 external systems**. In sandbox mode, all connectors 
 |---|-----------|---------|-----------|---------|------------|
 | 1 | **Salesforce** | CRM (accounts, contacts) | OAuth 2.0 | Mock | Implemented |
 | 2 | **Groups.io** | Mailing lists | Bearer token | Mock | Implemented |
-| 3 | **Google Calendar** | Meeting scheduling | Service account JWT | Mock | Stub |
-| 4 | **Discord** | Community channels/roles | Bot token | Mock | Stub |
-| 5 | **GitHub** | Repo collaborator access | PAT (Bearer) | Mock | Stub |
-| 6 | **LFX Platform** | LFID, elections, voting | API key | Mock | Stub |
-| 7 | **HubSpot** | Email templates, outreach | Private app key | Mock | Stub |
+| 3 | **PIS Groups.io** | Mailing lists via LFX PIS | X-ACL header | Mock | Built (awaiting creds) |
+| 4 | **PIS Meeting** | LFX Meeting (Zoom-backed) | X-ACL header | Mock | Built (awaiting creds) |
+| 5 | **PIS GitHub** | GitHub org/repo tracking | X-ACL header | Mock | Built (read-only) |
+| 6 | **Google Calendar** | Meeting scheduling (legacy) | Service account JWT | Mock | Replaced by PIS Meeting |
+| 7 | **Discord** | Community channels/roles | Bot token | Mock | Stub |
+| 8 | **GitHub** | Repo collaborator access | PAT (Bearer) | Mock | Stub |
+| 9 | **LFX Platform** | LFID, elections, voting | API key | Mock | Stub |
+| 10 | **HubSpot** | Email templates, outreach | Private app key | Mock | Stub |
 
 ### Environment Variables
 
 ```bash
+# 0. PIS (Project Infrastructure Service) — X-ACL header auth
+#    API: V2 — Groups.io, LFX Meeting, GitHub connectors
+#    Used by: Mailing List Provisioning, Calendar/Meeting Mgmt, WG Enrollment, Offboarding
+PIS_ACL_TOKEN=<x-acl-token-from-lf-sso-or-m2m>
+PIS_USERNAME=<lfid-username>
+AAIF_PROJECT_ID=<aaif-project-id-from-david>
+
 # 1. Salesforce CRM — OAuth 2.0 username-password flow
 #    API: REST v59.0 — SOQL queries on Account, Contact objects
 #    Used by: Tier Validation, Compliance, Contact Roles, Orchestrator
@@ -302,9 +312,14 @@ src/aaif_mcp_server/
 ├── models.py                  # Pydantic models (MemberOrg, Contact, SanctionsResult, etc.)
 ├── connectors/
 │   ├── base.py                # Abstract base classes (BaseConnector, BaseCRMConnector, etc.)
+│   ├── registry.py            # Connector registry (singleton init, env-var toggled PIS/mock)
+│   ├── pis_client.py          # Shared PIS HTTP client (X-ACL auth, retry, base URL)
+│   ├── pis_groupsio.py        # PIS Groups.io connector (mailing list CRUD via PIS V2)
+│   ├── pis_meeting.py         # PIS Meeting connector (LFX Meeting V2 / zoomV2 API)
+│   ├── pis_github.py          # PIS GitHub connector (org/repo tracking via PIS V2)
 │   ├── salesforce.py          # Salesforce REST API v59 (auto-falls back to mock)
-│   ├── groupsio.py            # Groups.io API v1 (auto-falls back to mock)
-│   ├── calendar.py            # Google Calendar API v3 (mock)
+│   ├── groupsio.py            # Groups.io API v1 (legacy — auto-falls back to mock)
+│   ├── calendar.py            # Google Calendar API v3 (legacy — replaced by PIS Meeting)
 │   ├── discord.py             # Discord Bot API v10 (mock)
 │   ├── github_connector.py    # GitHub REST API v3 (mock)
 │   ├── lfx_platform.py        # LFX Platform / OpenProfile API (mock)

@@ -32,6 +32,7 @@ from .hubspot import HubSpotConnector
 from .pis_client import PISClient
 from .pis_groupsio import PISGroupsIOConnector
 from .pis_github import PISGitHubConnector
+from .pis_meeting import PISMeetingConnector
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ _lfx: Optional[LFXPlatformConnector] = None
 _hubspot: Optional[HubSpotConnector] = None
 _pis_client: Optional[PISClient] = None
 _pis_github: Optional[PISGitHubConnector] = None
+_pis_meeting: Optional[PISMeetingConnector] = None
 _initialized: bool = False
 
 
@@ -67,7 +69,7 @@ async def initialize_connectors() -> None:
     Safe to call multiple times — subsequent calls are no-ops.
     """
     global _sfdc, _groupsio, _calendar, _discord, _github, _lfx, _hubspot
-    global _pis_client, _pis_github, _initialized
+    global _pis_client, _pis_github, _pis_meeting, _initialized
 
     if _initialized:
         logger.debug("Connector registry already initialized — skipping")
@@ -78,7 +80,7 @@ async def initialize_connectors() -> None:
 
     connector_count = 7
     if use_pis:
-        connector_count += 1  # PIS GitHub is supplemental
+        connector_count += 2  # PIS GitHub + PIS Meeting are supplemental
         logger.info(
             "PIS mode enabled: Groups.io and GitHub will use LFX PIS API "
             "(project_id=%s)", pis_project_id
@@ -122,6 +124,13 @@ async def initialize_connectors() -> None:
         await _pis_github.initialize()
         logger.info("GitHub: PIS supplemental connector enabled")
 
+        _pis_meeting = PISMeetingConnector(
+            pis_client=_pis_client,
+            project_id=pis_project_id,
+        )
+        await _pis_meeting.initialize()
+        logger.info("LFX Meeting: PIS connector enabled")
+
     _lfx = LFXPlatformConnector()
     await _lfx.initialize()
 
@@ -149,6 +158,7 @@ async def shutdown_connectors() -> None:
         ("discord", _discord),
         ("github", _github),
         ("pis_github", _pis_github),
+        ("pis_meeting", _pis_meeting),
         ("lfx_platform", _lfx),
         ("hubspot", _hubspot),
         ("pis_client", _pis_client),
@@ -219,6 +229,17 @@ def get_pis_github() -> Optional[PISGitHubConnector]:
     """
     _check_init()
     return _pis_github
+
+
+def get_pis_meeting() -> Optional[PISMeetingConnector]:
+    """Return the PIS LFX Meeting connector (None if PIS not configured).
+
+    When available, use this for calendar invite provisioning instead
+    of get_calendar(). Falls back to GoogleCalendarConnector when PIS
+    is not configured.
+    """
+    _check_init()
+    return _pis_meeting
 
 
 def get_lfx() -> LFXPlatformConnector:
