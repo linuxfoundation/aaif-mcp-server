@@ -22,14 +22,14 @@ Once the SFDC sandbox is connected, read the actual Descartes screening result f
 ## PIS Connector Integration Status
 
 ### PIS Groups.io (`pis_groupsio.py`) — ✅ Built
-**Status:** Built, awaiting credentials (PIS_ACL_TOKEN, AAIF_PROJECT_ID)
+**Status:** Built, project_id=lfZA9uadMdkwBqqHsj, awaiting M2M token (PIS_ACL_TOKEN)
 - Connector: `pis_groupsio.py` (subgroup cache, member CRUD, two-step removal)
 - Registry: wired in `registry.py`, env-var toggled
 - Tests: 33 tests passing (`test_pis_groupsio.py`)
 - MCP tools wired: `provision_mailing_lists`, `remove_from_mailing_lists`, `check_mailing_list_membership`, `remediate_mailing_lists`
 
 ### PIS Meeting (`pis_meeting.py`) — ✅ Built + MCP Tools Wired
-**Status:** Built, MCP tools updated, awaiting credentials
+**Status:** Built, MCP tools updated, project_id=lfZA9uadMdkwBqqHsj, awaiting M2M token
 - Connector: `pis_meeting.py` (meeting cache, registrant CRUD, mailing list sync, bulk ops)
 - Registry: wired in `registry.py`, env-var toggled
 - Tests: 33 connector tests (`test_pis_meeting.py`) + 13 tool integration tests (`test_tools_meeting_integration.py`)
@@ -40,11 +40,16 @@ Once the SFDC sandbox is connected, read the actual Descartes screening result f
   - `run_offboarding_checklist` → PIS registrant removal (replaces manual step)
   - `enroll_in_working_group` → PIS committee-scoped registrant provisioning
 
-### PIS GitHub (`pis_github.py`) — ✅ Built
-**Status:** Built, read-only, awaiting credentials
-- Connector: `pis_github.py` (org/repo listing)
+### PIS GitHub (`pis_github.py`) — ✅ Built + MCP Tools Wired
+**Status:** Built + wired, project_id=lfZA9uadMdkwBqqHsj, awaiting M2M token
+- Connector: `pis_github.py` (org/repo listing, repo verification)
 - Registry: wired in `registry.py`, env-var toggled
-- Tests: passing in `test_pis_github.py`
+- Tests: connector tests (`test_pis_connectors.py`) + 13 tool integration tests (`test_tools_github_integration.py`)
+- MCP tools wired:
+  - `enroll_in_working_group` → PIS repo verification + DCO enrichment
+  - `leave_working_group` → PIS source tracking
+  - `get_wg_members` → PIS repo metadata enrichment
+  - `run_offboarding_checklist` → PIS repo discovery + collaborator removal
 
 ---
 

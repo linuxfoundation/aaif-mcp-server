@@ -215,7 +215,7 @@ This server connects to **7 external systems**. In sandbox mode, all connectors 
 #    Used by: Mailing List Provisioning, Calendar/Meeting Mgmt, WG Enrollment, Offboarding
 PIS_ACL_TOKEN=<x-acl-token-from-lf-sso-or-m2m>
 PIS_USERNAME=<lfid-username>
-AAIF_PROJECT_ID=<aaif-project-id-from-david>
+PIS_PROJECT_ID=lfZA9uadMdkwBqqHsj
 
 # 1. Salesforce CRM — OAuth 2.0 username-password flow
 #    API: REST v59.0 — SOQL queries on Account, Contact objects

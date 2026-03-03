@@ -58,7 +58,7 @@ gcloud run deploy "${SERVICE_NAME}" \
   --min-instances 0 \
   --max-instances 3 \
   --timeout 300 \
-  --set-env-vars "AAIF_MCP_TRANSPORT=streamable-http,FASTMCP_HOST=0.0.0.0,FASTMCP_PORT=8080" \
+  --set-env-vars "AAIF_MCP_TRANSPORT=streamable-http,FASTMCP_HOST=0.0.0.0,FASTMCP_PORT=8080,PIS_PROJECT_ID=lfZA9uadMdkwBqqHsj" \
   --quiet
 
 # ── Step 4: Get the URL ───────────────────────────────────
