@@ -3,6 +3,11 @@ from __future__ import annotations
 
 Solves: Module-level connector instantiation without initialization (C-2).
 
+PIS Integration:
+    When PIS_ACL_TOKEN is set, Groups.io and GitHub connectors use the
+    LFX PIS API (ITX passthrough) instead of direct API calls.
+    All other connectors are unaffected.
+
 Usage:
     # At server startup (server.py):
     from .connectors.registry import initialize_connectors
@@ -14,7 +19,8 @@ Usage:
 """
 
 import logging
-from typing import Optional
+import os
+from typing import Optional, Union
 
 from .salesforce import SalesforceConnector
 from .groupsio import GroupsIOConnector
@@ -23,18 +29,28 @@ from .discord import DiscordConnector
 from .github_connector import GitHubConnector
 from .lfx_platform import LFXPlatformConnector
 from .hubspot import HubSpotConnector
+from .pis_client import PISClient
+from .pis_groupsio import PISGroupsIOConnector
+from .pis_github import PISGitHubConnector
 
 logger = logging.getLogger(__name__)
 
 # ── Singleton instances ──────────────────────────────────────────
 _sfdc: Optional[SalesforceConnector] = None
-_groupsio: Optional[GroupsIOConnector] = None
+_groupsio: Optional[Union[GroupsIOConnector, PISGroupsIOConnector]] = None
 _calendar: Optional[GoogleCalendarConnector] = None
 _discord: Optional[DiscordConnector] = None
 _github: Optional[GitHubConnector] = None
 _lfx: Optional[LFXPlatformConnector] = None
 _hubspot: Optional[HubSpotConnector] = None
+_pis_client: Optional[PISClient] = None
+_pis_github: Optional[PISGitHubConnector] = None
 _initialized: bool = False
+
+
+def _pis_is_configured() -> bool:
+    """Check if PIS credentials are available."""
+    return bool(os.environ.get("PIS_ACL_TOKEN") and os.environ.get("PIS_USERNAME"))
 
 
 async def initialize_connectors() -> None:
@@ -43,21 +59,50 @@ async def initialize_connectors() -> None:
     Creates each connector, calls its async initialize() method (which
     handles authentication or mock-data setup), and stores the singleton.
 
+    When PIS_ACL_TOKEN is set:
+    - Groups.io connector uses PIS API (via PISGroupsIOConnector)
+    - GitHub gets a supplemental PIS connector (PISGitHubConnector)
+    - All other connectors are unaffected
+
     Safe to call multiple times — subsequent calls are no-ops.
     """
-    global _sfdc, _groupsio, _calendar, _discord, _github, _lfx, _hubspot, _initialized
+    global _sfdc, _groupsio, _calendar, _discord, _github, _lfx, _hubspot
+    global _pis_client, _pis_github, _initialized
 
     if _initialized:
         logger.debug("Connector registry already initialized — skipping")
         return
 
-    logger.info("Initializing connector registry (7 connectors)…")
+    use_pis = _pis_is_configured()
+    pis_project_id = os.environ.get("PIS_PROJECT_ID", "")
+
+    connector_count = 7
+    if use_pis:
+        connector_count += 1  # PIS GitHub is supplemental
+        logger.info(
+            "PIS mode enabled: Groups.io and GitHub will use LFX PIS API "
+            "(project_id=%s)", pis_project_id
+        )
+
+    logger.info("Initializing connector registry (%d connectors)…", connector_count)
 
     _sfdc = SalesforceConnector()
     await _sfdc.initialize()
 
-    _groupsio = GroupsIOConnector()
-    await _groupsio.initialize()
+    # ── Groups.io: PIS or direct ─────────────────────────────────
+    if use_pis:
+        _pis_client = PISClient()
+        await _pis_client.initialize()
+
+        _groupsio = PISGroupsIOConnector(
+            pis_client=_pis_client,
+            project_id=pis_project_id,
+        )
+        await _groupsio.initialize()
+        logger.info("Groups.io: using PIS API connector")
+    else:
+        _groupsio = GroupsIOConnector()
+        await _groupsio.initialize()
 
     _calendar = GoogleCalendarConnector()
     await _calendar.initialize()
@@ -65,8 +110,17 @@ async def initialize_connectors() -> None:
     _discord = DiscordConnector()
     await _discord.initialize()
 
+    # ── GitHub: always init direct connector; PIS is supplemental
     _github = GitHubConnector()
     await _github.initialize()
+
+    if use_pis:
+        _pis_github = PISGitHubConnector(
+            pis_client=_pis_client,
+            project_id=pis_project_id,
+        )
+        await _pis_github.initialize()
+        logger.info("GitHub: PIS supplemental connector enabled")
 
     _lfx = LFXPlatformConnector()
     await _lfx.initialize()
@@ -75,7 +129,7 @@ async def initialize_connectors() -> None:
     await _hubspot.initialize()
 
     _initialized = True
-    logger.info("All 7 connectors initialized successfully")
+    logger.info("All %d connectors initialized successfully", connector_count)
 
     # Validate configuration
     from ..config import validate_config
@@ -94,8 +148,10 @@ async def shutdown_connectors() -> None:
         ("calendar", _calendar),
         ("discord", _discord),
         ("github", _github),
+        ("pis_github", _pis_github),
         ("lfx_platform", _lfx),
         ("hubspot", _hubspot),
+        ("pis_client", _pis_client),
     ]:
         if connector and hasattr(connector, "close"):
             try:
@@ -126,8 +182,13 @@ def get_sfdc() -> SalesforceConnector:
     return _sfdc  # type: ignore[return-value]
 
 
-def get_groupsio() -> GroupsIOConnector:
-    """Return the Groups.io connector singleton."""
+def get_groupsio() -> Union[GroupsIOConnector, PISGroupsIOConnector]:
+    """Return the Groups.io connector singleton.
+
+    Returns PISGroupsIOConnector when PIS is configured,
+    otherwise returns direct GroupsIOConnector.
+    Both implement BaseMailingListConnector interface.
+    """
     _check_init()
     return _groupsio  # type: ignore[return-value]
 
@@ -150,6 +211,16 @@ def get_github() -> GitHubConnector:
     return _github  # type: ignore[return-value]
 
 
+def get_pis_github() -> Optional[PISGitHubConnector]:
+    """Return the PIS GitHub connector (None if PIS not configured).
+
+    This is supplemental to get_github() — use it for org/repo
+    management via PIS. For collaborator access, use get_github().
+    """
+    _check_init()
+    return _pis_github
+
+
 def get_lfx() -> LFXPlatformConnector:
     """Return the LFX Platform connector singleton."""
     _check_init()
@@ -160,3 +231,9 @@ def get_hubspot() -> HubSpotConnector:
     """Return the HubSpot connector singleton."""
     _check_init()
     return _hubspot  # type: ignore[return-value]
+
+
+def get_pis_client() -> Optional[PISClient]:
+    """Return the shared PIS client (None if PIS not configured)."""
+    _check_init()
+    return _pis_client
